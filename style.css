@@ -1,13 +1,13 @@
 body {
     background-color: #121212;
     color: #ffffff;
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-family:  'Helvetica Neue';
     padding: 20px;
   }
   
   h1 {
     text-align: center;
-    color: #00bcd4;
+    color: #ffffff;
   }
   
   .dashboard {
@@ -21,7 +21,7 @@ body {
   }
   
   .chart-container {
-    background-color: #1e1e1e;
+    background-color: #454545;
     border-radius: 10px;
     padding: 20px;
   }

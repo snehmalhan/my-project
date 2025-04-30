@@ -8,6 +8,9 @@ const darkOptions = {
       y: { ticks: { color: 'white' }, grid: { color: '#333' } }
     }
   };
+
+// Chart.defaults.font.family = 'Helvetica Neue';
+//   Chart.defaults.font.size = '14px';
   
   function groupByHour(timestamps) {
     const counts = {};
@@ -25,11 +28,12 @@ const darkOptions = {
   }
   
   function parseEveJsonLines(lines) {
+    console.log("lineslines>>>", lines)
     const alerts = lines
       .map(line => {
         try { return JSON.parse(line); } catch { return null; }
       })
-      .filter(entry => entry && entry.event_type === "alert");
+      .filter(entry => entry);
   
     const timestamps = alerts.map(a => a.timestamp);
     const srcIps = alerts.map(a => a.src_ip);
@@ -60,7 +64,7 @@ const darkOptions = {
     .then(res => res.text())
     .then(raw => {
       const data = parseEveJsonLines(raw.trim().split('\n'));
-  
+       console.log("datadata>>>", data)
       // Alerts Over Time
       const timeLabels = Object.keys(data.alertsOverTime).sort();
       const timeCounts = timeLabels.map(k => data.alertsOverTime[k]);
@@ -72,7 +76,7 @@ const darkOptions = {
           datasets: [{
             label: 'Alerts per Hour',
             data: timeCounts,
-            backgroundColor: 'rgba(0,200,255,0.3)',
+            backgroundColor: 'rgb(102, 117, 247)',
             borderColor: '#0af',
             fill: true,
             pointStyle: 'circle' // Optional: affects tooltips too
@@ -127,12 +131,12 @@ const darkOptions = {
         type: 'bar',
         data: {
           labels: srcLabels,
-          datasets: [{ label: 'Source IPs', data: srcCounts, backgroundColor: '#f39c12' }]
+          datasets: [{ label: 'Source IPs', data: srcCounts, backgroundColor: 'rgb(233, 169, 50)' }]
         },
         options: {
           ...darkOptions,
           indexAxis: 'y',
-          plugins: { title: { display: true, text: 'Top 10 Source IPs', color:'white' , font:{size:16}},
+          plugins: { title: { display: true, text: 'Top 10 Source IPs', color:'white' , font:{size:18}},
           legend: {
             labels: {
               color: 'white',
@@ -150,7 +154,7 @@ const darkOptions = {
         type: 'bar',
         data: {
           labels: dstLabels,
-          datasets: [{ label: 'Destination IPs', data: dstCounts, backgroundColor: '#2ecc71' }]
+          datasets: [{ label: 'Destination IPs', data: dstCounts, backgroundColor: 'rgb(72, 234, 142)' }]
         },
         options: {
           ...darkOptions,
@@ -175,12 +179,13 @@ const darkOptions = {
           datasets: [{
             label: 'Protocol',
             data: Object.values(data.protoDist),
-            backgroundColor: ['#3498db', '#e74c3c', '#f1c40f', '#9b59b6'],
+            backgroundColor: ['rgb(239, 103, 103)', 'rgb(78, 241, 83)', 'rgb(76, 134, 236)', 'rgb(236, 153, 81)'],
             borderWidth: 0  // This removes the white border around segments
           }]
         },
         options: {
           ...darkOptions,
+          scales: {},
           plugins: {
             title: {
               display: true,
@@ -206,7 +211,7 @@ const darkOptions = {
         type: 'bar',
         data: {
           labels: portLabels,
-          datasets: [{ label: 'Destination Ports', data: portCounts, backgroundColor: '#e67e22' }]
+          datasets: [{ label: 'Destination Ports', data: portCounts, backgroundColor: 'rgb(236, 157, 88)' }]
         },
         options: {
           ...darkOptions,
@@ -231,7 +236,7 @@ const darkOptions = {
           datasets: [{
             label: 'Flows',
             data: flowCounts,
-            backgroundColor: '#1abc9c'
+            backgroundColor: 'rgb(74, 237, 224)'
           }]
         },
         options: {
@@ -278,71 +283,112 @@ const darkOptions = {
       
   
       // Heatmap simulation
-      const srcIps = Object.keys(data.heatmap).slice(0, 10);
-      const dstIps = [...new Set(srcIps.flatMap(src => Object.keys(data.heatmap[src])))].slice(0, 10);
-      
-      const matrixData = [];
-      srcIps.forEach((src, y) => {
-        dstIps.forEach((dst, x) => {
-          const value = data.heatmap[src][dst] || 0;
-          matrixData.push({ x, y, v: value });
+      const srcIps = [...new Set(Object.keys(data.heatmap))];  // Unique source IPs
+        const dstIps = [...new Set(Object.values(data.heatmap).flatMap((entry) => Object.keys(entry)))];  // Unique destination IPs
+
+        // Log to debug the IP arrays
+        console.log("Source IPs: ", srcIps);
+        console.log("Destination IPs: ", dstIps);
+
+        // Prepare matrix data
+        const matrixData = [];
+        Object.keys(data.heatmap).forEach((srcIp) => {
+            Object.keys(data.heatmap[srcIp]).forEach((dstIp) => {
+                matrixData.push({
+                    x: dstIp,      // Destination IP
+                    y: srcIp,      // Source IP
+                    v: data.heatmap[srcIp][dstIp]  // Alert count or value
+                });
+            });
         });
-      });
-      
-      new Chart(document.getElementById('heatmapChart'), {
-        type: 'matrix',
-        data: {
-          datasets: [{
-            label: 'Heatmap',
-            data: matrixData,
-            backgroundColor(context) {
-              const value = context.dataset.data[context.dataIndex].v;
-              const alpha = value / 60;  // normalize value
-              return `rgba(0, 200, 255, ${alpha})`;
-            },
-            borderWidth: 0,
-            width: () => 20,
-            height: () => 20
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: {
-            title: {
-              display: true,
-              text: 'Source IP vs Destination IP Heatmap',
-              color: 'white',
-              font:{size:16}
-            },
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                title: () => '',
-                label(context) {
-                  const { x, y, v } = context.raw;
-                  return `Src: ${srcIps[y]}, Dst: ${dstIps[x]}, Alerts: ${v}`;
+
+        // Log matrixData to debug the structure
+        console.log("Matrix Data: ", matrixData);
+
+        // Check if the canvas element exists
+        const canvas = document.getElementById('heatmapChart');
+        if (!canvas) {
+            console.error("Canvas element not found!");
+        } else {
+            // Create the heatmap chart
+            // Prepare the heatmap chart
+            new Chart(canvas, {
+                type: 'matrix',
+                data: {
+                    datasets: [{
+                        label: 'Alert Heatmap',
+                        data: matrixData,
+                        backgroundColor(context) {
+                            const value = context.dataset.data[context.dataIndex].v;
+                            return value > 10 ? 'rgb(239, 118, 118)' : 'rgb(88, 236, 130)';  // Adjust color logic as needed
+                        },
+                        borderWidth: 1,
+                        borderColor: '#444',
+                        width: () => Math.max(6, 600 / dstIps.length),
+                        height: () => Math.max(6, 400 / srcIps.length)
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        title: {
+                            display: true,
+                            text: 'Source IP vs Destination IP Heatmap',
+                            color: 'white',
+                            font: { size: 16 }
+                        },
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                title: () => '',  // No title for tooltip
+                                label(context) {
+                                    const { x, y, v } = context.raw;
+                                    const srcIp = y;  // Get the source IP based on the y index
+                                    const dstIp = x;  // Get the destination IP based on the x index
+                                    return `Src: ${srcIp}, Dst: ${dstIp}, Alerts: ${v}`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            type: 'category',
+                            labels: dstIps,  // Destination IPs on x-axis
+                            title: {
+                                display: true,
+                                text: 'Destination IP',
+                                color: 'white'
+                            },
+                            ticks: {
+                                color: 'white',
+                                autoSkip: false,
+                                maxRotation: 90
+                            },
+                            grid: {
+                                color: '#444'
+                            }
+                        },
+                        y: {
+                            type: 'category',
+                            labels: srcIps,  // Source IPs on y-axis
+                            title: {
+                                display: true,
+                                text: 'Source IP',
+                                color: 'white'
+                            },
+                            ticks: {
+                                color: 'white'
+                            },
+                            grid: {
+                                color: '#444'
+                            }
+                        }
+                    }
                 }
-              }
-            }
-          },
-          scales: {
-            x: {
-              type: 'category',
-              labels: dstIps,
-              title: { display: true, text: 'Destination IP', color: 'white'},
-              ticks: { color: 'white', autoSkip: false, maxRotation: 90 },
-              grid: { color: '#333' }
-            },
-            y: {
-              type: 'category',
-              labels: srcIps,
-              title: { display: true, text: 'Source IP', color: 'white' },
-              ticks: { color: 'white' },
-              grid: { color: '#333' }
-            }
-          }
+            });
         }
-      });
+
       
     })
     .catch(err => console.error("Failed to load eve.json:", err));
