@@ -1,5 +1,5 @@
 body {
-    background-color: #121212;
+    background-color: #251E34;
     color: #ffffff;
     font-family:  'Helvetica Neue';
     padding: 20px;
@@ -21,7 +21,7 @@ body {
   }
   
   .chart-container {
-    background-color: #454545;
+    background-color: #3c3a57;
     border-radius: 10px;
     padding: 20px;
   }
